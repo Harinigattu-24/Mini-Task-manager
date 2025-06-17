@@ -256,3 +256,209 @@ Open a pull request with details
 
 📄 License
 Licensed under the MIT License – feel free to use and modify.
+// Frontend validation
+if (!title.trim()) {
+  showNotification('Task title cannot be empty', 'error');
+  return;
+}
+
+// Backend validation
+if (!title || typeof title !== 'string' || title.trim().length === 0) {
+  return res.status(400).json({
+    success: false,
+    error: 'Title is required and must be a non-empty string'
+  });
+}
+Network Error Handling
+javascripttry {
+  const response = await api.createTask(taskData);
+  if (response.success) {
+    showNotification('Task added successfully!');
+  }
+} catch (error) {
+  showNotification('Failed to add task. Please try again.', 'error');
+}
+Additional Error Handling for Production
+1. Network Resilience
+
+Retry Logic: Automatic retry for failed requests (exponential backoff)
+Offline Support: Service workers for offline functionality
+Connection Status: Show network status to users
+
+2. Data Integrity
+
+Optimistic Updates: Update UI immediately, rollback on error
+Conflict Resolution: Handle concurrent updates to the same task
+Data Synchronization: Ensure consistency between client and server
+
+3. User Experience
+
+Error Boundaries: React error boundaries to catch component crashes
+Graceful Degradation: App continues working even with some features broken
+User Feedback: Clear, actionable error messages
+
+4. Edge Cases Covered
+
+Empty task titles
+Invalid task IDs (non-numeric, negative)
+Deleted tasks being updated
+Browser refresh during operations
+Rapid multiple clicks (debouncing)
+Network timeouts
+
+
+4. What security features would you add in production?
+Authentication & Authorization
+javascript// JWT-based authentication
+const jwt = require('jsonwebtoken');
+
+const authMiddleware = (req, res, next) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  
+  if (!token) {
+    return res.status(401).json({ error: 'Access denied. No token provided.' });
+  }
+  
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    req.user = decoded;
+    next();
+  } catch (error) {
+    res.status(400).json({ error: 'Invalid token.' });
+  }
+};
+Input Sanitization & Validation
+javascriptconst Joi = require('joi');
+
+const taskSchema = Joi.object({
+  title: Joi.string().min(1).max(255).required().trim(),
+  status: Joi.string().valid('pending', 'done')
+});
+
+const validateTask = (req, res, next) => {
+  const { error } = taskSchema.validate(req.body);
+  if (error) {
+    return res.status(400).json({ error: error.details[0].message });
+  }
+  next();
+};
+Additional Security Measures
+1. Data Protection
+
+HTTPS Enforcement: Redirect all HTTP to HTTPS
+Database Encryption: Encrypt sensitive data at rest
+Environment Variables: Secure credential management
+
+2. API Security
+
+Rate Limiting: Prevent API abuse
+
+javascriptconst rateLimit = require('express-rate-limit');
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100 // limit each IP to 100 requests per windowMs
+});
+
+CORS Configuration: Restrict allowed origins
+Request Size Limits: Prevent large payload attacks
+
+3. Content Security
+
+Content Security Policy (CSP): Prevent XSS attacks
+SQL Injection Prevention: Parameterized queries
+NoSQL Injection Prevention: Input sanitization
+
+4. Monitoring & Logging
+
+Access Logs: Track API usage and suspicious activity
+Error Monitoring: Real-time error tracking (Sentry)
+Security Alerts: Automated alerts for security events
+
+
+5. What would you improve if you had 1 full day?
+Priority 1: Database Integration (4 hours)
+javascript// Prisma schema
+model Task {
+  id        Int      @id @default(autoincrement())
+  title     String
+  status    Status   @default(PENDING)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    Int
+  user      User     @relation(fields: [userId], references: [id])
+}
+Benefits:
+
+Real data persistence
+Better performance with indexing
+Relationship management
+Data integrity constraints
+
+Priority 2: User Authentication (2 hours)
+javascript// NextAuth.js setup
+import NextAuth from 'next-auth'
+import GoogleProvider from 'next-auth/providers/google'
+
+export default NextAuth({
+  providers: [
+    GoogleProvider({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+    })
+  ],
+  callbacks: {
+    session: async ({ session, token }) => {
+      session.userId = token.sub;
+      return session;
+    }
+  }
+})
+Priority 3: Enhanced Features (1.5 hours)
+Advanced Task Management
+
+Categories/Tags: Organize tasks by project or category
+Due Dates: Task scheduling with calendar integration
+Priority Levels: High, Medium, Low priority tasks
+Subtasks: Break down complex tasks
+
+Improved UX
+
+Drag & Drop: Reorder tasks by priority
+Bulk Operations: Select and modify multiple tasks
+Search & Filter: Find tasks quickly
+Keyboard Shortcuts: Power user features
+
+Priority 4: Performance & Testing (0.5 hours)
+Performance Optimizations
+javascript// React.memo for expensive components
+const TaskCard = React.memo(({ task, onEdit, onDelete }) => {
+  // Component logic
+});
+
+// useMemo for expensive calculations
+const taskStats = useMemo(() => {
+  return {
+    pending: tasks.filter(t => t.status === 'pending').length,
+    completed: tasks.filter(t => t.status === 'done').length
+  };
+}, [tasks]);
+Testing Setup
+javascript// Jest + React Testing Library
+import { render, screen, fireEvent } from '@testing-library/react';
+import TaskCard from '../components/TaskCard';
+
+test('should toggle task status when button clicked', () => {
+  const mockToggle = jest.fn();
+  render(<TaskCard task={mockTask} onToggleStatus={mockToggle} />);
+  
+  fireEvent.click(screen.getByRole('button', { name: /mark as done/i }));
+  expect(mockToggle).toHaveBeenCalledWith(mockTask.id);
+});
+Future Roadmap (Beyond 1 Day)
+
+Real-time Collaboration: WebSocket integration for live updates
+Mobile App: React Native version
+Analytics: Task completion metrics and productivity insights
+Integrations: Calendar, email, Slack notifications
+AI Features: Smart task suggestions and auto-categorization
