@@ -1,1 +1,192 @@
+// pages/api/tasks/index.js
+let tasks = [
+  { id: 1, title: 'Complete project setup', status: 'pending', createdAt: new Date('2024-06-15').toISOString() },
+  { id: 2, title: 'Design database schema', status: 'done', createdAt: new Date('2024-06-14').toISOString() },
+  { id: 3, title: 'Implement user authentication', status: 'pending', createdAt: new Date('2024-06-16').toISOString() }
+];
 
+let nextId = 4;
+
+export default function handler(req, res) {
+  const { method } = req;
+
+  switch (method) {
+    case 'GET':
+      // GET /api/tasks - Get all tasks
+      try {
+        res.status(200).json({
+          success: true,
+          data: tasks,
+          count: tasks.length
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch tasks'
+        });
+      }
+      break;
+
+    case 'POST':
+      // POST /api/tasks - Create a new task
+      try {
+        const { title } = req.body;
+        
+        if (!title || typeof title !== 'string' || title.trim().length === 0) {
+          return res.status(400).json({
+            success: false,
+            error: 'Title is required and must be a non-empty string'
+          });
+        }
+
+        const newTask = {
+          id: nextId++,
+          title: title.trim(),
+          status: 'pending',
+          createdAt: new Date().toISOString()
+        };
+
+        tasks.push(newTask);
+
+        res.status(201).json({
+          success: true,
+          data: newTask,
+          message: 'Task created successfully'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to create task'
+        });
+      }
+      break;
+
+    default:
+      res.setHeader('Allow', ['GET', 'POST']);
+      res.status(405).json({
+        success: false,
+        error: `Method ${method} not allowed`
+      });
+  }
+}
+
+// pages/api/tasks/[id].js
+export default function handler(req, res) {
+  const { method, query } = req;
+  const { id } = query;
+  const taskId = parseInt(id);
+
+  // Validate ID
+  if (isNaN(taskId)) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid task ID'
+    });
+  }
+
+  const taskIndex = tasks.findIndex(task => task.id === taskId);
+
+  switch (method) {
+    case 'GET':
+      // GET /api/tasks/:id - Get specific task
+      try {
+        if (taskIndex === -1) {
+          return res.status(404).json({
+            success: false,
+            error: 'Task not found'
+          });
+        }
+
+        res.status(200).json({
+          success: true,
+          data: tasks[taskIndex]
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to fetch task'
+        });
+      }
+      break;
+
+    case 'PUT':
+      // PUT /api/tasks/:id - Update task
+      try {
+        if (taskIndex === -1) {
+          return res.status(404).json({
+            success: false,
+            error: 'Task not found'
+          });
+        }
+
+        const { title, status } = req.body;
+        const updates = {};
+
+        if (title !== undefined) {
+          if (typeof title !== 'string' || title.trim().length === 0) {
+            return res.status(400).json({
+              success: false,
+              error: 'Title must be a non-empty string'
+            });
+          }
+          updates.title = title.trim();
+        }
+
+        if (status !== undefined) {
+          if (!['pending', 'done'].includes(status)) {
+            return res.status(400).json({
+              success: false,
+              error: 'Status must be either "pending" or "done"'
+            });
+          }
+          updates.status = status;
+        }
+
+        tasks[taskIndex] = { ...tasks[taskIndex], ...updates };
+
+        res.status(200).json({
+          success: true,
+          data: tasks[taskIndex],
+          message: 'Task updated successfully'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to update task'
+        });
+      }
+      break;
+
+    case 'DELETE':
+      // DELETE /api/tasks/:id - Delete task
+      try {
+        if (taskIndex === -1) {
+          return res.status(404).json({
+            success: false,
+            error: 'Task not found'
+          });
+        }
+
+        const deletedTask = tasks.splice(taskIndex, 1)[0];
+
+        res.status(200).json({
+          success: true,
+          data: deletedTask,
+          message: 'Task deleted successfully'
+        });
+      } catch (error) {
+        res.status(500).json({
+          success: false,
+          error: 'Failed to delete task'
+        });
+      }
+      break;
+
+    default:
+      res.setHeader('Allow', ['GET', 'PUT', 'DELETE']);
+      res.status(405).json({
+        success: false,
+        error: `Method ${method} not allowed`
+      });
+  }
+}
